@@ -402,7 +402,7 @@ insert into Compra_Produto values(null, 75, 7897, 3, 2);
 insert into Compra_Produto values(null, 36, 4563, 4, 3);
 insert into Compra_Produto values(null, 30, 548, 2, 5);
 
--- Analise o banco de dados e normalize o atributo Endereço presente nas entidades Cliente e Fornecedor. 
+-- 1) Analise o banco de dados e normalize o atributo Endereço presente nas entidades Cliente e Fornecedor. 
 -- Saiba que funcionário também possui endereço, logo precisa dessa informação. Saiba que endereço
 -- precisa cumprir a 3FN, assim, cidade deve estar em uma tabela a parte. Ao final do processo de
 -- normalização, lembre-se de excluir os atributos simples de endereço afim de evitar a redundância de dados.
@@ -428,9 +428,131 @@ ALTER TABLE cliente DROP COLUMN endereco_cli;
 
 ALTER TABLE fornecedor ADD COLUMN id_end INT;
 ALTER TABLE fornecedor ADD FOREIGN KEY (id_end) REFERENCES endereco(id_end);
-ALTER TABLE fornecedor DROP COLUMN endereco_form;
+ALTER TABLE fornecedor DROP COLUMN endereco_forn;
 
 ALTER TABLE funcionario ADD COLUMN id_end INT;
 ALTER TABLE funcionario ADD FOREIGN KEY (id_end) REFERENCES endereco(id_end);
 
-SELECT * FROM FUNCIONARIO;
+SELECT * FROM fornecedor;
+
+-- 2) Normalize o atributo Sexo presente cliente e funcionario. Você deverá 
+-- obrigatoriamente fazer a migração de dados, ou seja, preencher as FKs de sexo.
+-- Lembre-se de excluir os atributos simples de sexo afim de evitar a redundância de dados. 
+
+CREATE TABLE sexo (
+	id_sex INT PRIMARY KEY AUTO_INCREMENT,
+    sex_sex VARCHAR(50) NOT NULL
+);
+
+INSERT INTO sexo (sex_sex) VALUES ('Masculino');
+INSERT INTO sexo (sex_sex) VALUES ('Feminino');
+
+ALTER TABLE Cliente ADD COLUMN id_sex_fk INT;
+ALTER TABLE Cliente ADD FOREIGN KEY (id_sex_fk) REFERENCES sexo(id_sex);
+
+ALTER TABLE Funcionario ADD COLUMN id_sex_fk INT;
+ALTER TABLE Funcionario ADD FOREIGN KEY (id_sex_fk) REFERENCES sexo(id_sex);
+
+UPDATE cliente c JOIN sexo s ON c.sexo_cli = s.sex_sex SET c.id_sex_fk = s.id_sex;
+SET SQL_SAFE_UPDATES = 0;
+UPDATE Funcionario f JOIN sexo s ON f.sexo_fun = s.sex_sex SET f.id_sex_fk = s.id_sex;
+
+SELECT nome_cli, sexo_cli, id_sex_fk FROM cliente;
+SELECT nome_fun, sexo_fun, id_sex_fk FROM funcionario;
+
+ALTER TABLE cliente DROP COLUMN sexo_cli;
+ALTER TABLE funcionario DROP COLUMN sexo_fun;
+
+-- 3) Liste todos os clientes cujo nome comece com a letra A, que sejam do sexo masculino, 
+-- tenham nascido entre os anos de 1990 e 2005, possuam e-mail que termine em @gmail.com, 
+-- apresentem CPF preenchido (não nulo), tenham telefone com o DDD 69 e cuja tipagem sanguínea
+-- seja A+ ou O+.
+
+SELECT * FROM cliente c JOIN sexo s ON c.id_sex_fk = s.id_sex WHERE nome_cli LIKE 'A%'
+AND sex_sex = 'Masculino' AND data_nasc_cli BETWEEN '1990-01-01' AND '2005-12-31'
+AND email_cli LIKE '%@gmail.com' AND cpf_cli IS NOT NULL AND telefone_cli LIKE '(69)%'
+AND (tipagem_sanguinea_cli = 'A+' OR tipagem_sanguinea_cli = 'O+');
+
+-- 4. Liste todos os funcionários que recebam salário entre 2000 e 5000 reais, 
+-- possuam função que contenha a palavra Atendente, sejam do sexo masculino ou 
+-- feminino, tenham e-mail terminado em .com.br, nasceram após 01/01/1985, entrem 
+-- no trabalho antes das 09:00 horas, possuam número de carteira de trabalho informado 
+-- (não vazio ou nulo) e cujo nome contenha a letra S.
+
+SELECT * FROM funcionario f JOIN sexo s ON f.id_sex_fk = s.id_sex WHERE salario_fun BETWEEN 2000 AND 5000
+AND funcao_fun LIKE '%Atendente%' AND email_fun LIKE '%.com.br' AND data_nasc_fun > '1985-01-01'
+AND f.horario_entrada_fun < '09:00:00' AND f.carteira_trabalho_fun IS NOT NULL AND carteira_trabalho_fun <> ''
+AND LOWER(nome_fun) LIKE '%s%';
+
+-- 5. Liste todos os produtos cujo valor de venda esteja entre 10 e 50 reais, possuam estoque
+-- superior a 100 unidades, sejam do tipo Bebida ou Doce, tenham nome contendo a palavra Coca,
+-- cuja marca não seja Genérica, cujo valor de compra seja menor que o valor de venda, cujo -
+-- nome termine em Zero e cuja descrição contenha a palavra lata.
+
+SELECT * FROM produto WHERE valor_venda_prod IN ('Bebida', 'Doce') AND estoque_prod > 100
+AND tipo_prod BETWEEN 'Doce' AND 'Bebida' AND nome_prod LIKE '%Coca%' AND marca_prod
+!= 'Genérica' AND valor_compra_prod < valor_venda_prod AND nome_prod LIKE '%Zero'
+AND descricao_prod LIKE '%lata%'; 
+
+-- 6. Liste todos os filmes que pertençam aos gêneros Ação, Comédia ou Drama, cujo título
+-- contenha a letra O ou letra A, que não sejam classificados como 18 anos, tenham duração
+-- entre 1h e 2h30, cujo diretor comece com a letra J, cujo título termine com a
+-- letra A ou E e cuja lista de atores contenha aos termos PE ou AN .
+
+SELECT * FROM Filme WHERE genero_film IN ('Ação', 'Comédia', 'Drama') AND (titulo_film LIKE '%O%' OR titulo_film LIKE '%A%')
+AND classificacao_indicativa_film <> '18 anos' AND duracao_film BETWEEN '01:00:00' AND '02:30:00' AND diretor_film LIKE 'J%'
+AND (titulo_film LIKE '%A' OR titulo_film LIKE '%E') AND (atores_film LIKE '%PE%' OR atores_film LIKE '%AN%');
+
+-- 7. Liste todas as vendas cujo valor esteja entre 30 e 500 reais, realizadas após as
+-- 14:00 horas, ocorridas no ano de 2024 ou 2025, vinculadas a um cliente existente
+-- (FK preenchida), efetuadas por funcionários de id 1, 2 ou 3, cujo valor não seja exatamente
+-- 100 reais, e cuja poltrona esteja entre 1 a 10.
+
+SELECT * FROM venda WHERE valor_vend between 30 AND 500 and hora_vend > '14:00:00' AND 
+data_vend BETWEEN '2024-01-01' AND '2025-12-31' AND id_cli_fk IS NOT NULL 
+and id_fun_fk IN (1,2,3) AND id_polt_fk BETWEEN 1 AND 10;
+
+-- 8. Liste todas as sessões realizadas no ano de 2025, cuja hora de início esteja entre
+-- 18:00 e 22:00, cuja hora de término seja maior que 20:00, vinculadas a filmes de 
+-- id 2, 3 ou 5, que não estejam em salas de id 4 ou 6, cujo término seja anterior
+-- a 23:59, cujo início não seja exatamente às 19:00 horas e termine antes das 23:00.
+
+SELECT * FROM sessao WHERE data_ses BETWEEN '2025-01-01' AND '2025-12-31'
+AND hora_inicio_ses BETWEEN '18:00:00' AND '22:00:00' AND hora_inicio_ses <> '19:00:00'
+AND hora_fim_ses > '20:00:00' AND hora_fim_ses < '23:00:00' AND id_film_fk IN (2, 3, 5)
+AND id_sala_fk NOT IN (4, 6);
+
+-- 9. Liste todas as despesas cujo valor esteja entre 500 e 3000 reais, que tenham 3
+-- parcelas ou mais, cuja data de lançamento esteja no ano de 2024, cuja descrição contenha
+-- a palavra energia, cujo vencimento seja posterior a 01/06/2024, cujo valor não seja
+-- exatamente 1000 reais, cuja descrição não contenha a palavra Agua ou Luz e cujo número
+-- de parcelas seja inferior a 12.
+
+SELECT * FROM Despesa WHERE valor_desp BETWEEN 500 AND 3000 AND valor_desp <> 1000
+AND parcelas_desp >= 3 AND parcelas_desp < 12 AND data_desp BETWEEN '2024-01-01' AND '2024-12-31'
+AND descricao_desp LIKE '%energia%' AND descricao_desp NOT LIKE '%Agua%'
+AND descricao_desp NOT LIKE '%Luz%' AND vencimento_desp > '2024-06-01';
+
+-- 10. Liste todos os fornecedores cujo nome comece com a letra C, que possuam e-mail contendo
+-- o caractere @, cujo CNPJ não inicie com 00, cujo telefone comece com 69, cuja razão social 
+-- contenha a expressão LTDA, cujo nome não termine em ME e cujo e-mail termine em .com.
+
+SELECT * FROM Fornecedor WHERE nome_forn LIKE 'C%' AND email_forn LIKE '%@%'
+AND cnpj_forn NOT LIKE '00%' AND telefone_forn LIKE '69%'
+AND razao_Social_forn LIKE '%LTDA%' AND nome_forn NOT LIKE '%ME'
+AND email_forn LIKE '%.com';
+
+-- 11. Liste todos os ingressos cujo valor esteja entre 20 e 60 reais, cuja data esteja no
+-- ano de 2025, cujo código de barras contenha a sequência 123, vinculados a alguma sessão 
+-- existente, cujo valor não seja 35 nem 45 reais, cuja data seja posterior ao mês de junho, 
+-- cujo valor seja maior que 25 reais e cujo código de barras termine em 9.
+
+SELECT * FROM ingresso WHERE valor_ing between 20 and 60 and data_ing between '2025-01-01' and
+'2025-12-31' AND cod_barras_ing LIKE '%123%' and id_ses_fk IS NOT NULL and valor_ing <> 35 and
+valor_ing <> 45 and data_ing < '2025-06-30' and valor_ing > 25 and cod_barras_ing like '%9';
+
+
+
+
+ 
+
