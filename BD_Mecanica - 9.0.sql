@@ -916,129 +916,118 @@ insert into pagamento values (null, '2023-04-30', 400.00, '1/1', 'Pago', 'cheque
 -- nome da Cidade e nome do Estado dos Clientes. Por fim ordene pelo nome do cliente. 
 -- Garanta que todos os clientes sejam mostrados, independente de ter ou não relação
 -- com as tabelas sexo e endereço.
-select
-cliente.nome_cli as Nome,
-cliente.cpf_cli as CPF,
-cliente.data_nascimento_cli as 'Data de Nascimento',
-sexo.nome_sex as Sexo,
-endereco.rua_end as Rua,
-endereco.numero_end as 'Número',
-endereco.bairro_end as Bairro,
-cidade.nome_cid as Cidade,
-estado.nome_est as Estado
-from cliente left join sexo on sexo.id_sex = cliente.id_sex_fk
-left join endereco on endereco.id_end = cliente.id_end_fk
-left join cidade on cidade.id_cid = endereco.id_cid_fk
-left join estado on estado.id_est = cidade.id_est_fk
-order by nome_cli;
+ select 
+ cliente.nome_cli as Nome,
+ cliente.renda_familiar_cli as Renda,
+ cliente.data_nascimento_cli as Data_Nascimento, 
+ sexo.nome_sex as Sexo,
+ endereco.rua_end as Rua,
+ endereco.numero_end as Numero,
+ endereco.bairro_end as Bairro,
+ cidade.nome_cid as Cidade,
+ estado.nome_est as Estado
+from 
+ cliente 
+ left join endereco on (cliente.id_end_fk = endereco.id_end)
+ left join sexo on (cliente.id_sex_fk = sexo.id_sex)
+ left join cidade on (endereco.id_cid_fk = cidade.id_cid) 
+ left join estado on (estado.id_est = cidade.id_est_fk)
+ order by cliente.nome_cli;
 
 -- 2) Selecione o nome, cpf, função, nome do Sexo, dados do Endereço, nome da Cidade, 
 -- nome do Estado e nome do Departamento dos Funcionários. Mostre somente os funcionarios
 -- com relação com as tabelas sexo, endereço e departamento. Por fim ordene pelo nome do
 -- funcionario.
-select
-funcionario.nome_func as Nome,
-funcionario.cpf_func as CPF,
-sexo.nome_sex as Sexo,
-endereco.rua_end as Rua,
-endereco.numero_end as 'Número',
-endereco.bairro_end as Bairro,
-cidade.nome_cid as Cidade,
-estado.nome_est as Estado,
-departamento.nome_dep as Departamento
-from funcionario join sexo on sexo.id_sex = funcionario.id_sex_fk
-join departamento on departamento.id_dep = funcionario.id_dep_fk
-join endereco on endereco.id_end = funcionario.id_end_fk
-join cidade on cidade.id_cid = endereco.id_cid_fk
-join estado on estado.id_est = cidade.id_est_fk
-order by nome_func;
+select 
+funcionario.nome_func as nome,
+funcionario.cpf_func as cpf,
+cargo.nome_carg as funcao,
+cidade.nome_cid as cidade,
+estado.nome_est as estado,
+departamento.nome_dep as departamento
+from 
+funcionario
+inner join cargo on (cargo.id_carg = funcionario.id_carg_fk)
+inner join sexo on (sexo.id_sex = funcionario.id_sex_fk)
+inner join departamento on (departamento.id_dep = funcionario.id_dep_fk)
+inner join endereco on (endereco.id_end = funcionario.id_end_fk)
+inner join cidade on (cidade.id_cid =endereco.id_cid_fk)
+inner join estado on (cidade.id_est_fk =estado.id_est)
+order by funcionario.nome_func;
 
 -- 3) Selecione a data e o valor da Compra, razão social do Fornecedor e os nomes, 
 -- quantidade e valor dos Produtos comprados entre os anos de 2000 a 2026. 
 -- Ordem pelo nome do fornecedor. 
-select
-compra.data_comp as 'Data',
-compra.valor_total_comp as Valor,
-fornecedor.razao_social_forn as 'Razão Social',
-fornecedor.nome_fantasia_forn as 'Nome Fantasia',
-produto.quant_prod as Quantidade,
-produto.valor_prod as Valor
-from compra join fornecedor on fornecedor.id_forn = compra.id_forn_fk
+select 
+compra.data_comp as data_compra,
+compra.valor_total_comp as valor_compra,
+fornecedor.razao_social_forn as fornecedor,
+produto.descricao_prod as produto,
+produto.quant_prod as quantidade,
+produto.valor_prod as valor_unitario,
+produto.quant_prod * produto.valor_prod as valor_item
+from
+compra join fornecedor on fornecedor.id_forn = compra.id_forn_fk
 join itens_compra on compra.id_comp = itens_compra.id_comp_fk
 join produto on produto.id_prod = itens_compra.id_prod_fk
-where data_comp between '2000-01-01' and '2025-12-31'
-order by nome_fantasia_forn;
+where compra.data_comp between '2000-01-01' and '2025-12-31'
+order by fornecedor.nome_fantasia_forn;
 
+select 
+compra.data_comp as data_compra,
+compra.valor_total_comp as valor_compra,
+fornecedor.razao_social_forn as fornecedor,
+produto.descricao_prod as produto,
+produto.quant_prod as quantidade,
+produto.valor_prod as valor_unitario,
+produto.quant_prod * produto.valor_prod as valor_item
+from
+compra 
+inner join fornecedor on (compra.id_forn_fk = fornecedor.id_forn) 
+inner join itens_compra on (itens_compra.id_comp_fk = compra.id_comp)
+inner join produto on (itens_compra.id_prod_fk = produto.id_prod)
+where
+(compra.data_comp between '2000-01-01' and '2026-12-31')
+order by fornecedor.razao_social_forn;
+
+select * from fornecedor;
 -- 4) Secione nome e o CPF do Cliente, assim como a quantidade, valor médio e a soma 
 -- do valor total das Vendas que ele participou.  Ordene por nome.
-select 
-cliente.nome_cli as Nome,
+select
+cliente.nome_cli as Cliente,
 cliente.cpf_cli as CPF,
-(select count(id_vend) from venda where(cliente.id_cli = venda.id_cli_fk)) as Quantidade,
-(select avg(valor_total_vend) from venda where (cliente.id_cli = venda.id_cli_fk)) as 'Média',
-(select sum(valor_total_vend) from venda where (cliente.id_cli = venda.id_cli_fk)) as Soma
-from cliente
-order by nome_cli;
+(select avg(Venda.valor_total_vend) from Venda where (venda.id_cli_fk = cliente.id_cli)) as valor_medio,
+(select sum(Venda.valor_total_vend) from Venda where (venda.id_cli_fk = cliente.id_cli)) as valor_total,
+(select count(Venda.id_cli_fk) from Venda where (venda.id_cli_fk = cliente.id_cli)) as quantidade_total
+from
+cliente
+order by cliente.nome_cli;
 
 -- 5) Crie uma visão para consulta nº 1. Depois crie um código de uso da visão para
 -- retornar os registros com renda entre mil e 20 mil reais e nascidos entre 1950 e 1999 
 -- e que sejam do sexo Masculino e que moram em endereços do tipo “Rua” ou “Avenida”. 
 -- Use REGEXP.
-create view consulta1 as select
-cliente.renda_familiar_cli as Renda,
-cliente.data_nascimento_cli as 'Data nascimento',
-sexo.nome_sex as Sexo,
-endereco.rua_end as Rua
-from cliente join sexo on sexo.id_sex = cliente.id_sex_fk
-join endereco on endereco.id_end = cliente.id_end_fk;
-select
-* from consulta1 where (Renda between 1000 and 20000) and (`Data nascimento` between '1950-01-01' and '1998-12-31')
-and Sexo = 'masculino' and Rua regexp '^(rua|av)';
+
 
 -- 6) Crie uma visão para consulta nº 2. Depois crie um código de uso da visão para 
 -- retornar os registros com salário superior a 1 mil reais e que possuam
 -- sobrenome “silva” ou “santos” ou “souza” e que sejam nascidos após a década 
 -- de 70 e que morem em estados da região “Norte” e “Sul” e “Sudeste”. Use REGEXP.
-create view consulta2 as select
-funcionario.salario_func as Salario,
-funcionario.nome_func as Sobrenome,
-funcionario.data_nascimento_func as 'Data de Nascimento',
-estado.regiao_est as Regiao
-from funcionario join endereco on endereco.id_end = funcionario.id_end_fk
-join cidade on cidade.id_cid = endereco.id_cid_fk
-join estado on estado.id_est = cidade.id_est_fk;
-select * from consulta2
-where Salario > 1000 and Sobrenome regexp '(silva|santos|souza)'
-and `Data de Nascimento` regexp '^(..7|..8|..9|..0|..1|..2)' and Regiao regexp 'Norte|Sul|Sudeste';
 
-select * from funcionario;
-select * from estado;
-select * from endereco;
-select * from cidade;
 
 -- 7) Mostre os clientes que não possuem nenhum carro. Dica: EXISTS
 select 
-cliente.nome_cli as Nome
-from cliente where not exists(select 1 from carro where carro.id_cli_fk = cliente.id_cli); 
+
 
 -- 8) Mostre os funcionarios com o CPF dentro do padrão de máscara: 000.000.000-00.
-select * from funcionario where (cpf_func regexp '^[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}-[0-9]{2}$');
+
 
 -- 9) Crie índices para os atributos nome e cpf de cliente e funcionario. 
-create index idx_nome_cli on cliente (nome_cli);
-create index idx_cpf_cli on cliente (cpf_cli);
-create index idx_nome_func on funcionario (nome_func);
-create index idx_cpf_func on funcionario (cpf_func);
+
 
 -- 10) Use o comando EXPLAIN e exame consultas que utilizam os atributos indexados 
 -- no exercício anterior. Explique o resultado do type no explain.
-explain select * from cliente where nome_cli = 'Ana';
-explain select * from cliente where cpf_cli = '111.111.111-11';
-explain select * from funcionario where nome_func = 'Ana';
-explain select * from funcionario where cpf_func = '111.111.111-11'; 
--- Nestas consultas, os tipos sendo ref, idicando que a indexação está sendo usada e consultando apenas a linha descrita na where,
--- caso n estivesse sendo usado, iria aparecer all, idicando que o select está buscando em todas as linhas da tabela, podendo 
--- observar isso em rows.
+
 
 
 
