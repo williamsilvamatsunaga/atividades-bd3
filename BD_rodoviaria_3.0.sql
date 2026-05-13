@@ -269,8 +269,6 @@ call InserirCidade('Dourados', 225000, 5);
 -- 3) Garanta que o campo cep seja inserido com apenas 8 dígitos e sem a máscara;
 -- TESTE: Chame o procedimento e insira 10 endereços aleatórios;
 
-drop procedure inserirEndereco;
-
 delimiter $$
 create procedure inserirEndereco (rua varchar(100), numero int, bairro varchar(100), cep varchar(100), id_cid_fk int)
 begin
@@ -308,3 +306,234 @@ call inserirEndereco('Rua Goiás', 147, 'Planalto', '76806000', 7);
 call inserirEndereco('Av. Amazonas', 258, 'Zona Sul', '76807000', 8);
 call inserirEndereco('Rua Mato Grosso', 369, 'Centro', '76808000', 9);
 call inserirEndereco('Rua Rio Grande', 159, 'Jardim das Palmeiras', '76809000', 10);
+
+-- RF4 – CADASTRAR CLIENTE
+-- Crie um procedimento para inserir um registro na tabela Cliente de acordo com as seguintes regras:
+-- 1) Garanta que as chaves estrangeiras realmente existam nas tabelas de origem;
+-- 2) Garanta que o usuário informe um CPF com o 11 caracteres.
+-- 3) Garanta que não seja inserido clientes com o CPF repetido;
+-- 4) Garanta que não seja inserida data de nascimento superior a data atual do SO e inferior ao ano de 1900. Dica: curdate()
+-- 5) Garanta que o usuário digite um e-mail com o caractere @.
+-- 6) O campo idade não deve ser inserido pelo usuário. O procedimento deverá preenchê-lo automaticamente a partir da data de nascimento. Dica: datediff()
+-- TESTE: Chame o procedimento e insira 05 clientes aleatórios;
+
+delimiter $$
+create procedure inserirCliente (nome varchar (300), cpf varchar (300), rg varchar (300), nascimento date, celular varchar (300),
+								email varchar (300), sexo int, endereco int)
+begin
+	declare teste_cpf varchar (300);
+	declare teste_sexo, teste_endereco, idade int;
+    
+    set teste_cpf = (select cpf_cli from cliente where (cpf_cli = cpf));
+	set teste_sexo = (select id_sex from sexo where (id_sex = sexo));
+    set teste_endereco = (select id_end from endereco where (id_end = endereco));
+    
+    set idade = datediff(curdate(), nascimento) / 365;
+    
+    if (teste_sexo is not null) then
+		if (teste_endereco is not null) then
+			if (teste_cpf is null) then
+				if (nome <> '') and (cpf <> '') and (nascimento is not null) and (sexo <> '') and (endereco <> '') then
+					if (length(cpf) = 11) then
+						if ((cpf like '%-%') is false) then
+							if (nascimento < curdate()) and (nascimento > '1900-01-01') then
+								if (email like '%@%') then
+									insert into cliente values (null, nome, cpf, rg, nascimento, idade, celular, email, sexo, endereco);
+									select concat('O cliente ', nome, ' com CPF ', cpf, ' foi inserido com sucesso!') as Confirmacao;
+								else
+									select 'O campo e-mail precisa conter o caractere @!' as Alerta;
+								end if;
+							else
+								select 'A Data de Nascimento precisa ser inferior a data atual e superior ao ano 1900!' as Alerta;
+							end if;
+						else
+							select 'O CPF não pode ser inserido com a máscara, somente números!' as Alerta;
+						end if;
+					else
+						select 'O campo CPF precisa receber apenas 11 caracteres!' as Alerta;
+					end if;
+				else
+					select 'Os campos nome, cpf, data de nascimento, sexo e endereco são obrigatorios!' as Alerta;
+				end if;
+			else 
+				select 'O CPF informado já existe no sistema!' as Alerta;
+			end if;
+		else
+			select 'O ID de Endereco informado não existe na tabela de origem!' as Alerta;
+		end if;
+	else
+		select 'O ID de Sexo informado não existe na tabela de origem!' as Alerta;
+	end if;
+end;
+$$ delimiter ;
+
+call inserirCliente ('Jackson Henrique', '52956261215', '880075', '1898-06-30', '69 984085712', 'jackson@gmail.com', 1, 4);
+call inserirCliente ('Jaqueline Leao', '00747571210', '880075', '1993-06-21', '69 984085712', 'jaque@gmail.com', 1, 5);
+call inserirCliente ('William da Silva Matsunaga', '06360238298', '199306', '1993-06-22', '69 984055712', 'will229zica@gmail.com', 1, 3);
+call inserirCliente ('Mateus', '00647571210', '880175', '1993-06-28', '69 984585712', 'mateus@gmail.com', 1, 2);
+call inserirCliente ('Fernando Sampaio Correa', '00727571210', '810075', '1993-06-29', '69 984084712', 'fag@gmail.com', 1, 5);
+
+#RF5 - Cadastrar Funcionario
+delimiter $$
+create procedure inserirFuncionario (nome varchar (300), cpf varchar (300), rg varchar (300), nascimento date, 
+salario float, funcao varchar (300), contratacao date, celular varchar (300), email varchar (300), sexo int, departamento int, endereco int)
+begin
+	declare teste_cpf varchar (300);
+	declare teste_sexo, teste_endereco, teste_departamento int;
+    
+    set teste_cpf = (select cpf_fun from funcionario where (cpf_fun = cpf));
+	set teste_sexo = (select id_sex from sexo where (id_sex = sexo));
+    set teste_endereco = (select id_end from endereco where (id_end = endereco));
+	set teste_departamento = (select id_dep from departamento where (id_dep = departamento));
+
+    if (teste_departamento is not null) then
+		if (teste_sexo is not null) then
+			if (teste_endereco is not null) then
+				if (teste_cpf is null) then
+					if (nome <> '') and (cpf <> '') and (salario <> '') and (funcao <> '') and (celular <> '') and (email <> '') and (sexo <> '') and (endereco <> '') and (departamento <> '') then
+						if (contratacao < curdate()) then
+							if (nascimento < curdate()) then
+								if (salario > 1412.00) then
+									insert into funcionario values (null, nome, cpf, rg, nascimento, salario, funcao, contratacao, celular, email, sexo, departamento, endereco);
+									select concat('O funcionario ', nome, ' com CPF ', cpf, ' foi inserido com sucesso!') as Confirmacao;
+								else
+									select 'O salario nao pode ser inferir a R$ 1.412,00!' as Alerta;
+								end if;
+							else
+								select 'A data de nascimento não pode ser superir a data atual!' as Alerta;
+							end if;
+						else
+							select 'A data de contratacao não pode ser superir a data atual!' as Alerta;
+						end if;
+					else
+						select 'Os campos nome, cpf, salario, funcao, celular, email, departamento, sexo e endereco são obrigatorios!' as Alerta;
+					end if;
+				else 
+					select 'O CPF informado já existe no sistema!' as Alerta;
+				end if;
+			else
+				select 'O ID de Endereco informado não existe na tabela de origem!' as Alerta;
+			end if;
+		else
+			select 'O ID de Sexo informado não existe na tabela de origem!' as Alerta;
+		end if;
+	else
+		select 'O ID do Departamento informado não existe na tabela de origem!' as Alerta;
+	end if;
+end;
+$$ delimiter ;
+
+call inserirFuncionario ('Sonia Bezerra', '527.123.123-10', '123457 SSP', '1965-09-10', 1500.55, 'Atendente', '2022-01-01', '69 9844 4444', 'sonia@gmail.com', 2, 1, 4);
+call inserirFuncionario ('Francisco Silva', '123.123.123-20', '54577 SSP', '1968-07-10', 2900.55, 'Motorista', '2022-01-01', '69 98421 1144', 'chico@gmail.com', 1, 4, 5);
+call inserirFuncionario ('Ana Maria Santos', '231.323.111-20', '123123 SSP', '1987-09-30', 4900.00, 'Gerente', '2000-02-01', '69 99844 7744', 'ana@gmail.com', 2, 4, 2);
+call inserirFuncionario ('Gabriel Braga', '231.767.567-66', '32341 SSP', '1990-09-30', 3200.00, 'Mecanico', '2021-09-01', '69 99844 4787', 'gabriel@gmail.com', 1, 2, 1);
+
+#RF6 - Cadastrar Onibus
+delimiter $$
+create procedure inserirOnibus (modelo varchar (300), marca varchar (300), placa varchar (300), capacidade int)
+begin
+	declare teste_placa varchar (300);
+	set teste_placa = (select placa_oni from onibus where (placa_oni = placa));
+    
+	if (modelo <> '') and (placa <> '') and (capacidade <> '') then
+		if (teste_placa is null) then
+			if (placa regexp '^[a-z]{3}-[0-9]{4}$') then
+				if (capacidade = 48) or (capacidade = 60) then
+					insert into onibus values (null, modelo, marca, placa, capacidade);
+					select concat('O onibus com placa ', placa, ' foi inserido com sucesso!') as Confirmacao;
+				else
+					select 'Os onibus possuem capacidade restrita a 48 ou 60 poltronas!' as Alerta;
+				end if;
+			else
+				select 'A placa informada não pode ser inserida com máscara. Ex: XXX-1111!' as Alerta;
+			end if;
+		else
+			select 'A placa informada deve possuir apenas 7 caracteres!' as Alerta;
+		end if;
+	else
+		select 'Os campos modelo, placa e capacidade!' as Alerta;
+	end if;
+end;
+$$ delimiter ;
+
+call inserirOnibus ('Marcopolo 1516', 'Marcopolo', 'NDD-1120', 60);
+call inserirOnibus ('VW Future', 'Volskwagem', 'NQE-9877', 60);
+call inserirOnibus ('Marcopolo 966', 'Marcopolo', 'NPD-1578', 48);
+call inserirOnibus ('Mercebes Tourino 2015', 'Mercedes', 'NPQ-8713', 48);
+
+-- RF7 - CADASTRAR POLTRONAS
+-- Crie um procedimento para inserir os registros na tabela Poltrona
+-- de acordo com as seguintes regras:
+-- 1) O procedimento deve receber apenas placa do ônibus,
+-- garantindo que seja digitado com a máscara.
+-- 2) A partir da placa o procedimento deve verificar se o ônibus
+-- informado já possui poltronas cadastradas, para que não
+-- sejam cadastrados poltronas em duplicidade para um mesmo
+-- ônibus.
+-- 3) Garanta que a placa informada exista na base de dados.
+-- 4) Crie uma estrutura de repetição para inserir automaticamente
+-- as poltronas no ônibus de acordo com a sua capacidade
+-- (identificada a partir da placa) do ônibus informado. Cada
+-- poltrona deve ser criada com status de ‘livre’;
+-- TESTE: Chame o procedimento e insira poltronas para os 04
+-- ônibus cadastrados.
+
+delimiter $$
+
+create procedure inserirPoltrona (placa varchar(100))
+begin
+    declare id_oni int;
+    declare test_pol int;
+    declare capacidade int;
+    declare controle int;
+
+    set controle = 1;
+
+    set id_oni = (select id_oni from onibus where placa_oni = placa limit 1);
+	set test_pol = (select count(id_pol) from poltrona where id_oni_fk = id_oni);
+    set capacidade = (select capacidade_oni from onibus where placa_oni = placa limit 1);
+    
+    if (placa like '%-%') then
+        if (id_oni is not null) then
+            if (test_pol = 0) then
+                while (controle <= capacidade) do
+                    insert into poltrona values (null, controle, 'Livre', id_oni);
+                    set controle = controle + 1;
+                end while;
+                select 'Poltronas cadastradas com sucesso' as Confirmacao;
+            else
+                select 'Poltronas já cadastradas para este ônibus' as Alert;
+            end if;
+        else
+            select 'Ônibus não encontrado' as Alert;
+        end if;
+    else
+        select 'Placa em formato incorreto' as Alert;
+    end if;
+end $$
+delimiter ;
+
+call inserirPoltrona('ABC-1234');
+call inserirPoltrona('DEF-5678');
+call inserirPoltrona('GHI-9012');
+call inserirPoltrona('JKL-3456');
+
+-- RF10 - MARCAR POLTRONA
+-- Crie um procedimento chamado MarcarPoltrona para atualizar a passagem e a poltrona marcada de acordo com as seguintes regras:
+-- 1) Esse procedimento deve receber somente ID da passagem e o número da poltrona (não é o ID) escolhida.
+-- 2) Verifique se a poltrona informada está com o status de “Livre”.
+-- Caso SIM:
+-- Faça um update na poltrona escolhida e altere o seu status para “Ocupada”, informe o usuário com mensagem de confirmação.
+-- Atualize a tabela Passagem informando o número da poltrona escolhida;
+ -- Caso NÃO:
+-- Mensagem 1: Informe ao usuário que a poltrona esta ocupada e peça para escolher outra poltrona;
+-- TESTE: Chame o procedimento e marque uma poltrona para cada uma das Passagem vendidas;
+
+delimiter $$
+	
+begin
+
+end
+
+$$ delimiter;
+
